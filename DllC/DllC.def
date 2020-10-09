@@ -1,0 +1,3 @@
+LIBRARY DllC
+
+EXPORTS fun
