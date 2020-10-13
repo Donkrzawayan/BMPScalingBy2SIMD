@@ -2,9 +2,8 @@
 
 MyProc1 proc
 
-add RCX, RDX
-mov RAX, RCX
+mov RAX, RCX ;przenies RCX (pierwszy parametr) do RAX
 
-ret
+ret ;zwraca zawartosc RAX
 MyProc1 endp
 end

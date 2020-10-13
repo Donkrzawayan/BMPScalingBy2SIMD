@@ -1,9 +1,20 @@
 #include "bmp.hpp"
 #include <fstream>
 
+BMP::BMP(const BMP & source, const int32_t width, const int32_t height)
+	: header(source.header), width(width), height(height), size(3 * width * height), data(new uint8_t[size])
+{
+	uint32_t file_size = HEADER_SIZE + size;
+	*(int32_t *)&header[FILE_SIZE] = file_size;
+
+	// write image height and width to header
+	*(int32_t *)&header[WIDTH] = width;
+	*(int32_t *)&header[HEIGHT] = height;
+}
+
 void BMP::read(const char * filename)
 {
-	std::fstream input(filename, std::ios::binary | std::ios::in);
+	std::ifstream input(filename, std::ios::binary | std::ios::in);
 	if (!input) { return; }
 
 	//clear old data
@@ -14,8 +25,8 @@ void BMP::read(const char * filename)
 	input.read(header.data(), header.size());
 
 	// extract image height and width from header
-	width = *(int32_t *)&header[18];
-	height = *(int32_t *)&header[22];
+	width = *(int32_t *)&header[WIDTH];
+	height = *(int32_t *)&header[HEIGHT];
 
 	// allocate 3 bytes per pixel
 	size = 3 * width * height;
@@ -24,4 +35,14 @@ void BMP::read(const char * filename)
 	// read the rest of the data at once
 	input.read((char *)data, sizeof(uint8_t) * size);
 	input.close();
+}
+
+void BMP::write(const char * filename)
+{
+	std::ofstream output(filename, std::ios::binary | std::ios::out);
+	if (!output) { return; }
+
+	output.write(header.data(), header.size());
+	output.write((char *)data, sizeof(uint8_t) * size);
+	output.close();
 }
