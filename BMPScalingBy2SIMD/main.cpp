@@ -12,14 +12,13 @@
 typedef uint8_t *(_fastcall *MyProc1)(uint8_t *, uint8_t *, int32_t, unsigned);
 
 void scaler(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
-	/*HINSTANCE dllHandle = NULL;
+	HINSTANCE dllHandle = NULL;
 	dllHandle = LoadLibrary(L"DllMasm.dll");
 	MyProc1 procedura = (MyProc1)GetProcAddress(dllHandle, "MyProc1");
-	uint8_t * retVal = procedura(destination, source, width, height);*/
-	HINSTANCE dllHandle = NULL;
-	dllHandle = LoadLibrary(L"DllC.dll");
+	procedura(destination, source, width, size);
+	/*dllHandle = LoadLibrary(L"DllC.dll");
 	MyProc1 fun = (MyProc1)GetProcAddress(dllHandle, "fun");
-	fun(destination, source, width, size);
+	fun(destination, source, width, size);*/
 }
 
 void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height) {
@@ -37,6 +36,7 @@ void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t
 	size = subpxWidth * rowsPerThread;
 	for (unsigned i = 0; i < N - firstLoop; ++i, dest += 4 * size, src += size)
 		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
+	//scaler(dest, src, subpxWidth, size);
 
 	while (!threads.empty()) {
 		threads.front().join();
@@ -72,20 +72,20 @@ int main(const int argc, char *argv[])
 		}
 	}
 
-	std::cout << "Size of: " << sizeof(uint8_t *) << "\n";
+	std::cout << "Size of: " << sizeof(uint8_t) << "\n";
 
 	BMP source(sourceName);
 	BMP dest(source, 2 * source.width, 2 * source.height);
-	//initializeArray(dest.data, dest.size);
+	initializeArray(dest.data, dest.size);
 
 
-	auto start = std::chrono::high_resolution_clock::now();
+	/*auto start = std::chrono::high_resolution_clock::now();*/
 
 	multithreating(thread, dest.data, source.data, source.width, source.height);
 
-	auto stop = std::chrono::high_resolution_clock::now();
+	/*auto stop = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	std::cout << duration.count() << "\n";
+	std::cout << duration.count() << "\n";*/
 
 	dest.write(destName);
 }
