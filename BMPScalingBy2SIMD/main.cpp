@@ -8,17 +8,20 @@
 #include <queue>
 #include <chrono>
 
-//typedef uint8_t *(_fastcall *MyProc1)(uint8_t *, uint8_t *, int32_t, int32_t);
 typedef uint8_t *(_fastcall *MyProc1)(uint8_t *, uint8_t *, int32_t, unsigned);
 
-void scaler(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
+void scalerASM(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
 	HINSTANCE dllHandle = NULL;
 	dllHandle = LoadLibrary(L"DllMasm.dll");
 	MyProc1 procedura = (MyProc1)GetProcAddress(dllHandle, "MyProc1");
 	procedura(destination, source, width, size);
-	/*dllHandle = LoadLibrary(L"DllC.dll");
+}
+
+void scalerC(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
+	HINSTANCE dllHandle = NULL;
+	dllHandle = LoadLibrary(L"DllC.dll");
 	MyProc1 fun = (MyProc1)GetProcAddress(dllHandle, "fun");
-	fun(destination, source, width, size);*/
+	fun(destination, source, width, size);
 }
 
 void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height) {
@@ -30,12 +33,12 @@ void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t
 	//rowsPerThread+1
 	int32_t size = subpxWidth * rowsPerThread + subpxWidth;
 	for (int i = 0; i < firstLoop; ++i, dest += 4 * size, src += size)
-		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
+		threads.push(std::move(std::thread(scalerASM, dest, src, subpxWidth, size)));
 
 	//rowsPerThread
 	size = subpxWidth * rowsPerThread;
 	for (unsigned i = 0; i < N - firstLoop; ++i, dest += 4 * size, src += size)
-		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
+		threads.push(std::move(std::thread(scalerASM, dest, src, subpxWidth, size)));
 	//scaler(dest, src, subpxWidth, size);
 
 	while (!threads.empty()) {
@@ -72,7 +75,7 @@ int main(const int argc, char *argv[])
 		}
 	}
 
-	std::cout << "Size of: " << sizeof(uint8_t) << "\n";
+	//std::cout << "Size of: " << sizeof(uint8_t) << "\n";
 
 	BMP source(sourceName);
 	BMP dest(source, 2 * source.width, 2 * source.height);
