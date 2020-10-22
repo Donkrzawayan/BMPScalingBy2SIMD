@@ -6,60 +6,51 @@ MyProc1 proc
 		; RCX - dest, RDX - src, R8 - width, R9 - size
 	mov R11, RCX ; skopiuj dest do zwrocenia na koncu
 	mov RBX, RDX ; potrzebuje miejsce na idiv
-	;mov R15, R8
-	;shr R15, 1
 
-
-		; for (tempSrc = src, tempDest = dest; tempSrc < src + size; tempDest += destWidth) {
-	xor R10, R10 ; licznik petli
-	cmp R10, R9  ; tempSrc < src + size
-	jae koniecPetli
-
-		; do {
-petlaPrzechodzacaWierszIWysokosc:
-
-		; memcpy(tempDest, tempSrc, 3);
-		; memcpy(tempDest + 3, tempSrc, 3);
-		; MoveSmall3
-	movzx EAX, word ptr [RBX+R10]  ; get two bytes from source
-	movzx EDX, byte ptr 2[RBX+R10] ; get last byte from source
-	mov [RCX+2*R10], EAX           ; write two bytes to destination
-	mov 2[RCX+2*R10], EDX          ; write last byte to destination
-	mov 3[RCX+2*R10], EAX          ; write two bytes to destination
-	mov 5[RCX+2*R10], EDX          ; write last byte to destination
-
-
-		; tempSrc += 3;
-		; tempDest += 2 * 3;
-	add R10, 3 ; przejdz na kolejny pixel
-
-
-		; } while ((tempSrc - src) % sourceWidth);
-		; tempSrc - src to to samo co licznik
-	mov RAX, R10  ; skopuj licznik do RAXa (pierwsza liczba dzielenia)
+	mov RAX, R9   ; skopuj size do RAXa (pierwsza liczba dzielenia)
 	cdq           ; zwieksz RAX na RAX i RDX (RDX:RAX)
-	idiv R8       ; dzielenie RDX:RAX przez R8 (width)
-	test RDX, RDX ; jesli jest 0 ustawia flage ZR na 1
-	jne petlaPrzechodzacaWierszIWysokosc
+	idiv R8       ; dzielenie RDX:RAX przez R8 (width); wykonaj petle tyle co w RAX
+	test RAX, RAX ; jesli jest 0 ustawia flage ZR na 1
+	je koniec     ; ZR=1 konczy program
+
+	mov R9, R8 ; o tyle przeskakuj w dest po kazdym wiwrszu src
+	shl R9, 2   ; po kazdym przejsciu wiersza przeskocz dwa dalej (dest+=2*2*width)
 
 
-		; memcpy(tempDest, tempDest - destWidth, destWidth);
-		; w SSE2
+		; ustawienie maski (wykorzystam XMM0-XMM2)
+	mov R10, 0608070605040305h
+	mov RDX, 0403020100020100h ; 0 - 5 i 1/3 pixela w dest
+	movq XMM0, RDX
+	pinsrq XMM0, R10, 1        ; przenies z normalnych rejestrow do XMM0
+	mov R10, 0908070605070605h
+	mov RDX, 0403020403020100h ; 5 i 1/3 - 10 i 2/3 pixela w dest
+	movq XMM1, RDX
+	pinsrq XMM1, R10, 1        ; przenies z normalnych rejestrow do XMM1
+	mov R10, 0807060807060504h
+	mov RDX, 0305040302010002h ; 10 i 2/3 - 16 pixel w dest
+	movq XMM2, RDX
+	pinsrq XMM2, R10, 1        ; przenies z normalnych rejestrow do XMM2
 
 
-		; tempDest += destWidth
-	add RCX, R8
-	add RCX, R8 ; pomijaj co drugi wiersz
-	;add RCX, R15
+poczatekPetli:
+
+	movups XMM3, [RBX]      ; wez 16 bajtow z src
+	pshufb XMM3, XMM0       ; rozmiesc bajty w XMM3 wedlug maski w XMM0
+	movups [RCX], XMM3      ; zapisz dane w dest
+	movups [RCX+2*R8], XMM3 ; zapisz dane w dest+2*width (width jest z src)
+
+	add RCX, R9 ; przeskocz dwa wiersze w dest
+	add RBX, R8  ; przeskocz do kolejnego wiersza w src
+
+	dec RAX           ; kolejne przejscie petli do 0
+	test RAX, RAX     ; jesli jest 0 ustawia flage ZR na 1
+	jne poczatekPetli ; ZR=0 wykonuje ponownie
 
 
-	cmp R10, R9 ; tempSrc < src + size
-	jb petlaPrzechodzacaWierszIWysokosc ; przesocz na poczatek petli
-
-koniecPetli:
+koniec:
 	mov RAX, R11 ; zwroc dest
 
 
-ret ;zwraca zawartosc RAX
+ret ; zwraca zawartosc RAX
 MyProc1 endp
 end
