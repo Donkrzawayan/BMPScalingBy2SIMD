@@ -1,10 +1,10 @@
 #include "bmp.hpp"
 #include <fstream>
+#include <iostream>
 
 BMP::BMP(const BMP & source, const int32_t width, const int32_t height)
-	: header(source.header), width(width), height(height), size(3 * width * height)//, data(new uint8_t[size])
+	: header(source.header), width(width), height(height), size(3 * width * height), data(new uint8_t[size])
 {
-	data = new uint8_t[size];
 	uint32_t file_size = HEADER_SIZE + size;
 	*(int32_t *)&header[FILE_SIZE] = file_size;
 
@@ -16,8 +16,10 @@ BMP::BMP(const BMP & source, const int32_t width, const int32_t height)
 void BMP::read(const char * filename)
 {
 	std::ifstream input(filename, std::ios::binary | std::ios::in);
-	if (!input)
+	if (!input) {
+		std::cout << "Cant read file.\n";
 		return;
+	}
 
 	//clear old data
 	if (data)
@@ -32,6 +34,10 @@ void BMP::read(const char * filename)
 
 	// allocate 3 bytes per pixel
 	size = 3 * width * height;
+	if (size >= INT32_MAX / 4) {
+		std::cout << "Too big file.\n";
+		return;
+	}
 	data = new uint8_t[size];
 
 	// read the rest of the data at once
@@ -42,8 +48,10 @@ void BMP::read(const char * filename)
 void BMP::write(const char * filename)const
 {
 	std::ofstream output(filename, std::ios::binary | std::ios::out);
-	if (!output)
+	if (!output) {
+		std::cout << "Cant write file.\n";
 		return;
+	}
 
 	output.write(header.data(), header.size());
 	output.write((char *)data, sizeof(uint8_t) * size);
