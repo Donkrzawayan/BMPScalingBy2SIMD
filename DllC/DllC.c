@@ -3,7 +3,7 @@
 #include <string.h> /* memcpy */
 #include <math.h>
 
-uint8_t *fun(uint8_t *dest, uint8_t *src, int32_t sourceWidth, unsigned size) {
+void fun(uint8_t *dest, uint8_t *src, int32_t sourceWidth, unsigned size) {
 	int32_t destWidth = 2 * sourceWidth;
 	uint8_t *tempSrc, *tempDest;
 	for (tempSrc = src, tempDest = dest; tempSrc < src + size; tempDest += destWidth) {
@@ -17,6 +17,4 @@ uint8_t *fun(uint8_t *dest, uint8_t *src, int32_t sourceWidth, unsigned size) {
 
 		memcpy(tempDest, tempDest - destWidth, destWidth);
 	}
-
-	return dest;
 }
