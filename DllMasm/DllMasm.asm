@@ -13,7 +13,7 @@ MyProc1 proc
 	je koniec     ; ZR=1 konczy program
 
 	mov R9, R8  ; o tyle przeskakuj w dest po kazdym wiwrszu src
-	shl R9, 2   ; po kazdym przejsciu wiersza przeskocz dwa dalej (dest+=2*2*width)
+	shl R9, 1   ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width)
 
 
 		; ustawienie maski (wykorzystam XMM0-XMM2)
@@ -33,9 +33,17 @@ MyProc1 proc
 
 poczatekPetli:
 
-	movups XMM3, [RBX]       ; wez 16 bajtow z src
-	pshufb XMM3, XMM0        ; rozmiesc bajty w XMM3 wedlug maski w XMM0
-	movups [RCX], XMM3       ; zapisz dane w dest
+	xor R11, R11 ; licznik w wierszu
+	; mov R11, R8
+
+	cmp R8, 24 ; jeli rowne lub wieksze od 8 pizeli/24subpixei
+	jb mniejszeNiz24
+
+nadal24LubWieksze:
+	
+	movups XMM3, [RBX]        ; wez 16 bajtow z src
+	pshufb XMM3, XMM0         ; rozmiesc bajty w XMM3 wedlug maski w XMM0
+	movups [RCX], XMM3        ; zapisz dane w dest
 	
 	movups XMM4, 7[RBX]       ; wez 16 bajtow z src
 	pshufb XMM4, XMM1         ; rozmiesc bajty w XMM4 wedlug maski w XMM1
@@ -49,9 +57,42 @@ poczatekPetli:
 	movups 16[RCX+2*R8], XMM4 ; zapisz dane w dest+2*width (width jest z src)
 	movups 32[RCX+2*R8], XMM5 ; zapisz dane w dest+2*width (width jest z src)
 
+	add RBX, 24 ; zwieksz src o pixele wlasnie przetworzone
+	add RCX, 48 ; zwieksz dest o pixele wlasnie przetworzone
 
-	add RCX, R9  ; przeskocz dwa wiersze w dest
-	add RBX, R8  ; przeskocz do kolejnego wiersza w src
+	add R11, 48
+	cmp R8, R11
+	sub R11, 24
+	jbe nadal24LubWieksze
+
+	cmp R8, R11 ; jesli rowne skoncz ten wiersz
+	je nastepnyWiersz
+
+mniejszeNiz24:
+
+	mov R10D, [RBX] ; get 4 bytes from source
+	movzx EDX, byte ptr 2[RBX] ; get one byte from source
+	mov [RCX], R10D            ; write 4 bytes to destination
+	;mov 2[RCX], DL            ; write one byte to destination
+	mov 3[RCX], R10W           ; write two bytes to destination
+	mov 5[RCX], DL             ; write one byte to destination
+	mov [RCX+2*R8], R10D       ; write 4 bytes to destination
+	;mov 2[RCX+2*R8], DL       ; write one byte to destination
+	mov 3[RCX+2*R8], R10W      ; write two bytes to destination
+	mov 5[RCX+2*R8], DL        ; write one byte to destination
+
+	add RBX, 3
+	add RCX, 6
+
+	add R11, 3
+	cmp R11, R8 ; 
+	jb mniejszeNiz24
+
+	
+nastepnyWiersz:
+	add RCX, R9  ; pomin wiersz w dest
+	;add RCX, R9  ; przeskocz dwa wiersze w dest
+	;add RBX, R8  ; przeskocz do kolejnego wiersza w src
 
 	dec RAX           ; kolejne przejscie petli do 0
 	test RAX, RAX     ; jesli jest 0 ustawia flage ZR na 1

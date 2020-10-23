@@ -28,6 +28,9 @@ void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t
 	const int32_t subpxWidth = 3 * width;
 	const int32_t rowsPerThread = height / N;
 	const int32_t firstLoop = height % N;
+
+	//auto start = std::chrono::high_resolution_clock::now();
+
 	std::queue<std::thread> threads;
 
 	//rowsPerThread+1
@@ -45,6 +48,10 @@ void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t
 		threads.front().join();
 		threads.pop();
 	}
+
+	//auto stop = std::chrono::high_resolution_clock::now();
+	//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+	//std::cout << duration.count() << "\n";
 }
 
 //TODO: delete later
@@ -52,11 +59,6 @@ void initializeArray(uint8_t *data, int32_t size) {
 	for (int i = 0; i < size; ++i)
 		data[i] = static_cast<uint8_t>(2);
 }
-
-//template <typename ToDuration= std::chrono::milliseconds>
-//class Stoper {
-//
-//};
 
 int main(const int argc, char *argv[])
 {
@@ -75,20 +77,14 @@ int main(const int argc, char *argv[])
 		}
 	}
 
-	//std::cout << "Size of: " << sizeof(uint8_t) << "\n";
-
 	BMP source(sourceName);
 	BMP dest(source, 2 * source.width, 2 * source.height);
 	initializeArray(dest.data, dest.size);
 
 
-	/*auto start = std::chrono::high_resolution_clock::now();*/
-
+	//for (int i = 0; i < 20; ++i)
 	multithreating(thread, dest.data, source.data, source.width, source.height);
 
-	/*auto stop = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	std::cout << duration.count() << "\n";*/
 
 	dest.write(destName);
 }
