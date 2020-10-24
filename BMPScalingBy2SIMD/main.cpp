@@ -7,6 +7,7 @@
 #include <thread>
 #include <queue>
 #include <chrono>
+#include <intrin.h> // cpuinfo
 
 typedef uint8_t *(_fastcall *MyProc1)(uint8_t *, uint8_t *, int32_t, unsigned);
 
@@ -24,7 +25,9 @@ void scalerC(uint8_t *destination, uint8_t *source, int32_t width, unsigned size
 	fun(destination, source, width, size);
 }
 
-void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height) {
+void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
+	const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height)
+{
 	const int32_t subpxWidth = 3 * width;
 	const int32_t rowsPerThread = height / N;
 	const int32_t firstLoop = height % N;
@@ -36,12 +39,12 @@ void multithreating(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t
 	//rowsPerThread+1
 	int32_t size = subpxWidth * rowsPerThread + subpxWidth;
 	for (int i = 0; i < firstLoop; ++i, dest += 4 * size, src += size)
-		threads.push(std::move(std::thread(scalerASM, dest, src, subpxWidth, size)));
+		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
 
 	//rowsPerThread
 	size = subpxWidth * rowsPerThread;
 	for (unsigned i = 0; i < N - firstLoop; ++i, dest += 4 * size, src += size)
-		threads.push(std::move(std::thread(scalerASM, dest, src, subpxWidth, size)));
+		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
 	//scaler(dest, src, subpxWidth, size);
 
 	while (!threads.empty()) {
@@ -60,6 +63,7 @@ void initializeArray(uint8_t *data, int32_t size) {
 		data[i] = static_cast<uint8_t>(2);
 }
 
+//TODO: choosing DDL from user
 int main(const int argc, char *argv[])
 {
 	const char *sourceName = "";
@@ -77,13 +81,19 @@ int main(const int argc, char *argv[])
 		}
 	}
 
+	int cpuinfo[4];
+	__cpuid(cpuinfo, 1);
+	bool sse4_1Supportted = false;
+	sse4_1Supportted = cpuinfo[2] & (1 << 19) || false;
+	//std::cout << "SSE4.1:" << (sse4_1Supportted ? 1 : 0) << std::endl;
+
 	BMP source(sourceName);
 	BMP dest(source, 2 * source.width, 2 * source.height);
 	initializeArray(dest.data, dest.size);
 
 
 	//for (int i = 0; i < 20; ++i)
-	multithreating(thread, dest.data, source.data, source.width, source.height);
+	multithreating(scalerASM, thread, dest.data, source.data, source.width, source.height);
 
 
 	dest.write(destName);
