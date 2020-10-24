@@ -17,7 +17,7 @@ void BMP::read(const char * filename)
 {
 	std::ifstream input(filename, std::ios::binary | std::ios::in);
 	if (!input) {
-		std::cout << "Cant read file.\n";
+		std::cerr << "Cant read file.\n";
 		return;
 	}
 
@@ -35,7 +35,7 @@ void BMP::read(const char * filename)
 	// allocate 3 bytes per pixel
 	size = 3 * width * height;
 	if (size >= INT32_MAX / 4) {
-		std::cout << "Too big file.\n";
+		std::cerr << "Too big file.\n";
 		return;
 	}
 	data = new uint8_t[size];
@@ -49,7 +49,7 @@ void BMP::write(const char * filename)const
 {
 	std::ofstream output(filename, std::ios::binary | std::ios::out);
 	if (!output) {
-		std::cout << "Cant write file.\n";
+		std::cerr << "Cant write file.\n";
 		return;
 	}
 
