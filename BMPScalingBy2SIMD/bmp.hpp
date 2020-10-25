@@ -11,6 +11,7 @@ private:
 public:
 	std::array<char, HEADER_SIZE> header;
 	int32_t width, height;
+	int32_t rowPadded;
 	int32_t size;
 	uint8_t *data;
 

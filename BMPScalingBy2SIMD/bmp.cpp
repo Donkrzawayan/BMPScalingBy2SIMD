@@ -3,7 +3,9 @@
 #include <iostream>
 
 BMP::BMP(const BMP & source, const int32_t width, const int32_t height)
-	: header(source.header), width(width), height(height), size(3 * width * height), data(new uint8_t[size])
+	: header(source.header),
+	width(width), height(height), rowPadded(3 * width + width % 4), size(rowPadded * height),
+	data(new uint8_t[size])
 {
 	uint32_t file_size = HEADER_SIZE + size;
 	*(int32_t *)&header[FILE_SIZE] = file_size;
@@ -22,8 +24,7 @@ void BMP::read(const char * filename)
 	}
 
 	//clear old data
-	if (data)
-		delete[]data;
+	delete[]data;
 
 	// read the 54-byte header
 	input.read(header.data(), header.size());
@@ -31,13 +32,18 @@ void BMP::read(const char * filename)
 	// extract image height and width from header
 	width = *(int32_t *)&header[WIDTH];
 	height = *(int32_t *)&header[HEIGHT];
+	
+	//padding
+	rowPadded = 3 * width + width % 4;
 
 	// allocate 3 bytes per pixel
-	size = 3 * width * height;
+	size = rowPadded * height;
+
 	if (size >= INT32_MAX / 4) {
 		std::cerr << "Too big file.\n";
 		return;
 	}
+	
 	data = new uint8_t[size];
 
 	// read the rest of the data at once

@@ -26,7 +26,8 @@ void scalerC(uint8_t *destination, uint8_t *source, int32_t width, unsigned size
 }
 
 void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
-	const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height)
+	const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height,
+	const int32_t srcRowPadding, const int32_t destRowPadding)
 {
 	const int32_t subpxWidth = 3 * width;
 	const int32_t rowsPerThread = height / N;
@@ -37,14 +38,16 @@ void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
 	std::queue<std::thread> threads;
 
 	//rowsPerThread+1
-	int32_t size = subpxWidth * rowsPerThread + subpxWidth;
-	for (int i = 0; i < firstLoop; ++i, dest += 4 * size, src += size)
-		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
+	int32_t srcSize = srcRowPadding * rowsPerThread + srcRowPadding;
+	int32_t destSize = 2 * (destRowPadding * rowsPerThread + destRowPadding);
+	for (int i = 0; i < firstLoop; ++i, dest += destSize, src += srcSize)
+		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, srcSize)));
 
 	//rowsPerThread
-	size = subpxWidth * rowsPerThread;
-	for (unsigned i = 0; i < N - firstLoop; ++i, dest += 4 * size, src += size)
-		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, size)));
+	srcSize = srcRowPadding * rowsPerThread;
+	destSize = 2 * destRowPadding * rowsPerThread;
+	for (unsigned i = 0; i < N - firstLoop; ++i, dest += destSize, src += srcSize)
+		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, srcSize)));
 	//scaler(dest, src, subpxWidth, size);
 
 	while (!threads.empty()) {
@@ -93,7 +96,8 @@ int main(const int argc, char *argv[])
 
 
 	//for (int i = 0; i < 20; ++i)
-	multithreating(scalerASM, thread, dest.data, source.data, source.width, source.height);
+	multithreating(scalerC, thread, dest.data, source.data,
+		source.width, source.height, source.rowPadded, dest.rowPadded);
 
 
 	dest.write(destName);
