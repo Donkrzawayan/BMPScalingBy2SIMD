@@ -6,7 +6,7 @@
 void fun(uint8_t *dest, uint8_t *src, int32_t sourceWidth, unsigned size) {
 	int32_t destWidth = 2 * sourceWidth;
 	uint8_t *tempSrc, *tempDest;
-	int32_t srcPadding = 4 - sourceWidth % 4;
+	int32_t srcPadding = (sourceWidth / 3) % 4;
 	int32_t destPadding = srcPadding % 2 ? 2 : 0;
 	for (tempSrc = src, tempDest = dest; tempSrc < src + size;
 		tempSrc += srcPadding, tempDest += destWidth+destPadding)

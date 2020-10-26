@@ -96,7 +96,7 @@ int main(const int argc, char *argv[])
 
 
 	//for (int i = 0; i < 20; ++i)
-	multithreating(scalerC, thread, dest.data, source.data,
+	multithreating(scalerASM, thread, dest.data, source.data,
 		source.width, source.height, source.rowPadded, dest.rowPadded);
 
 

@@ -2,6 +2,8 @@
 .code
 
 MyProc1 proc
+	push R12
+	push R15
 
 		; RCX - dest, RDX - src, R8 - width, R9 - size
 	mov RBX, RDX ; potrzebuje miejsce na idiv
@@ -12,8 +14,36 @@ MyProc1 proc
 	test RAX, RAX ; jesli jest 0 ustawia flage ZR na 1
 	je koniec     ; ZR=1 konczy program
 
-	mov R9, R8 ; o tyle przeskakuj w dest po kazdym wiwrszu src
-	shl R9, 1  ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width)
+		; padding
+	;mov	R9, 1431655766				; 55555556H
+	;mov	rbx, rcx
+	mov R9, R8
+	imul R9, 1431655766				; 55555556H
+	;mov	eax, edx
+	shr	R9, 32
+	;add	edx, eax
+	and	R9, -2147483645			; ffffffff80000003H
+
+
+	;mov R10, R8 ; int32_t srcPadding = 4 - sourceWidth % 4;
+	;and R10, 0FFFFFFFF80000003h
+	;jge	SHORT nieJestUjemna
+	;dec	R10
+	;or	R10, -4
+	;inc	R10
+;nieJestUjemna:
+	mov R12, R9
+	and R12, 1
+	lea R12, DWORD PTR [R12+R12]
+	;mov R9, 4
+	;sub R9, R10
+	;mov R12, R9
+	;and R12, 1
+	;lea R12, DWORD PTR [R12+R12]
+
+	mov R15, R8 ; o tyle przeskakuj w dest po kazdym wiwrszu src
+	shl R15, 1  ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width)
+	add R15, R12
 
 
 		; ustawienie maski (wykorzystam XMM0-XMM2)
@@ -50,9 +80,9 @@ nadal24LubWieksze:
 	pshufb XMM5, XMM2         ; rozmiesc bajty w XMM5 wedlug maski w XMM2
 	movups 32[RCX], XMM5      ; zapisz dane w dest
 
-	movups [RCX+2*R8], XMM3   ; zapisz dane w dest+2*width (width jest z src)
-	movups 16[RCX+2*R8], XMM4 ; zapisz dane w dest+2*width (width jest z src)
-	movups 32[RCX+2*R8], XMM5 ; zapisz dane w dest+2*width (width jest z src)
+	movups [RCX+R15], XMM3   ; zapisz dane w dest+2*width (width jest z src)
+	movups 16[RCX+R15], XMM4 ; zapisz dane w dest+2*width (width jest z src)
+	movups 32[RCX+R15], XMM5 ; zapisz dane w dest+2*width (width jest z src)
 
 	add RBX, 24 ; zwieksz src o pixele wlasnie przetworzone
 	add RCX, 48 ; zwieksz dest o pixele wlasnie przetworzone
@@ -72,9 +102,9 @@ mniejszeNiz24:
 	mov [RCX], R10D            ; write 4 bytes to destination
 	mov 3[RCX], R10W           ; write two bytes to destination
 	mov 5[RCX], DL             ; write one byte to destination
-	mov [RCX+2*R8], R10D       ; write 4 bytes to destination
-	mov 3[RCX+2*R8], R10W      ; write two bytes to destination
-	mov 5[RCX+2*R8], DL        ; write one byte to destination
+	mov [RCX+R15], R10D       ; write 4 bytes to destination
+	mov 3[RCX+R15], R10W      ; write two bytes to destination
+	mov 5[RCX+R15], DL        ; write one byte to destination
 
 	add RBX, 3  ; kolejny pixel w src
 	add RCX, 6  ; kolejny pixel w src
@@ -84,7 +114,11 @@ mniejszeNiz24:
 
 	
 nastepnyWiersz:
-	add RCX, R9  ; pomin wiersz w dest
+	add RCX, R15  ; pomin wiersz w dest
+	add RCX, R12
+	;add RCX, R8
+	;add RCX, R8
+	add RBX, R9
 
 	dec RAX           ; kolejne przejscie petli do 0
 	test RAX, RAX     ; jesli jest 0 ustawia flage ZR na 1
@@ -93,6 +127,8 @@ nastepnyWiersz:
 
 koniec:
 
+	pop R15
+	pop R12
 
 ret ; zwraca zawartosc RAX
 MyProc1 endp
