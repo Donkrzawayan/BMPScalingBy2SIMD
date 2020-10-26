@@ -15,35 +15,18 @@ MyProc1 proc
 	je koniec     ; ZR=1 konczy program
 
 		; padding
-	;mov	R9, 1431655766				; 55555556H
-	;mov	rbx, rcx
-	mov R9, R8
-	imul R9, 1431655766				; 55555556H
-	;mov	eax, edx
-	shr	R9, 32
-	;add	edx, eax
-	and	R9, -2147483645			; ffffffff80000003H
+	mov R9, R8                   ; srcPadding bedzie w R9
+	imul R9, 55555556H           ; zamiast dzielenia i modulo pomnoz 0101...
+	shr	R9, 32                   ; przesun na prawidlowa pozycje
+	and	R9, 0ffffffff80000003H   ; tylko liczby mniejsze niz 4 sa wazne
 
+	mov R12, R9                  ; padding dla dest
+	and R12, 1                   ; moze byc tylko 2 albo 0
+	lea R12, DWORD PTR [R12+R12] ; jak jest 1 to zrob 2
 
-	;mov R10, R8 ; int32_t srcPadding = 4 - sourceWidth % 4;
-	;and R10, 0FFFFFFFF80000003h
-	;jge	SHORT nieJestUjemna
-	;dec	R10
-	;or	R10, -4
-	;inc	R10
-;nieJestUjemna:
-	mov R12, R9
-	and R12, 1
-	lea R12, DWORD PTR [R12+R12]
-	;mov R9, 4
-	;sub R9, R10
-	;mov R12, R9
-	;and R12, 1
-	;lea R12, DWORD PTR [R12+R12]
-
-	mov R15, R8 ; o tyle przeskakuj w dest po kazdym wiwrszu src
-	shl R15, 1  ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width)
-	add R15, R12
+	mov R15, R8  ; o tyle przeskakuj w dest po kazdym wiwrszu src
+	shl R15, 1   ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width+padding)
+	add R15, R12 ; tu jest ten +padding
 
 
 		; ustawienie maski (wykorzystam XMM0-XMM2)
@@ -80,9 +63,9 @@ nadal24LubWieksze:
 	pshufb XMM5, XMM2         ; rozmiesc bajty w XMM5 wedlug maski w XMM2
 	movups 32[RCX], XMM5      ; zapisz dane w dest
 
-	movups [RCX+R15], XMM3   ; zapisz dane w dest+2*width (width jest z src)
-	movups 16[RCX+R15], XMM4 ; zapisz dane w dest+2*width (width jest z src)
-	movups 32[RCX+R15], XMM5 ; zapisz dane w dest+2*width (width jest z src)
+	movups [RCX+R15], XMM3    ; zapisz dane w dest+2*width (width jest z src)
+	movups 16[RCX+R15], XMM4  ; zapisz dane w dest+2*width (width jest z src)
+	movups 32[RCX+R15], XMM5  ; zapisz dane w dest+2*width (width jest z src)
 
 	add RBX, 24 ; zwieksz src o pixele wlasnie przetworzone
 	add RCX, 48 ; zwieksz dest o pixele wlasnie przetworzone
@@ -116,8 +99,6 @@ mniejszeNiz24:
 nastepnyWiersz:
 	add RCX, R15  ; pomin wiersz w dest
 	add RCX, R12
-	;add RCX, R8
-	;add RCX, R8
 	add RBX, R9
 
 	dec RAX           ; kolejne przejscie petli do 0
