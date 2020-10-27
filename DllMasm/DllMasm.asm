@@ -7,23 +7,22 @@ MyProc1 proc
 	push R15
 
 		; RCX - dest, RDX - src, R8 - width, R9 - size
-	mov RBX, RDX ; potrzebuje miejsce na idiv
 
-	mov RAX, R9   ; skopuj size do RAXa (pierwsza liczba dzielenia)
-	cdq           ; zwieksz RAX na RAX i RDX (RDX:RAX)
-	idiv R8       ; dzielenie RDX:RAX przez R8 (width); wykonaj petle tyle co w RAX
-	test RAX, RAX ; jesli jest 0 ustawia flage ZR na 1
-	je koniec     ; ZR=1 konczy program
+	test R9, R9  ; jesli size rowne 0 to skoncz program
+	je koniec
+	mov RAX, RDX ; kopiuj do src+size
+	add RAX, R9  ; na tym skoncz kopiowanie
+
 
 		; padding
-	mov R9, R8                   ; srcPadding bedzie w R9
-	imul R9, 55555556H           ; zamiast dzielenia i modulo pomnoz 0101...
-	shr	R9, 32                   ; przesun na prawidlowa pozycje
-	and	R9, 0ffffffff80000003H   ; tylko liczby mniejsze niz 4 sa wazne
+	mov R9, R8                 ; srcPadding bedzie w R9
+	imul R9, 55555556H         ; zamiast dzielenia i modulo pomnoz 0101...
+	shr	R9, 32                 ; przesun na prawidlowa pozycje
+	and	R9, 0ffffffff80000003H ; tylko liczby mniejsze niz 4 sa wazne
 
-	mov R12, R9                  ; padding dla dest
-	and R12, 1                   ; moze byc tylko 2 albo 0
-	lea R12, DWORD PTR [R12+R12] ; jak jest 1 to zrob 2
+	mov R12, R9                ; padding dla dest
+	and R12, 1                 ; moze byc tylko 2 albo 0
+	shl R12, 1                 ; jak jest 1 to zrob 2
 
 	mov R15, R8  ; o tyle przeskakuj w dest po kazdym wiwrszu src
 	shl R15, 1   ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width+padding)
@@ -32,16 +31,16 @@ MyProc1 proc
 
 		; ustawienie maski (wykorzystam XMM0-XMM2)
 	mov R10, 0608070605040305h
-	mov RDX, 0403020100020100h ; 0 - 5 i 1/3 pixela w dest
-	movq XMM0, RDX
+	mov RBX, 0403020100020100h ; 0 - 5 i 1/3 pixela w dest
+	movq XMM0, RBX
 	pinsrq XMM0, R10, 1        ; przenies z normalnych rejestrow do XMM0
 	mov R10, 0908070605070605h
-	mov RDX, 0403020403020100h ; 5 i 1/3 - 10 i 2/3 pixela w dest
-	movq XMM1, RDX
+	mov RBX, 0403020403020100h ; 5 i 1/3 - 10 i 2/3 pixela w dest
+	movq XMM1, RBX
 	pinsrq XMM1, R10, 1        ; przenies z normalnych rejestrow do XMM1
 	mov R10, 0807060807060504h
-	mov RDX, 0305040302010002h ; 10 i 2/3 - 16 pixel w dest
-	movq XMM2, RDX
+	mov RBX, 0305040302010002h ; 10 i 2/3 - 16 pixel w dest
+	movq XMM2, RBX
 	pinsrq XMM2, R10, 1        ; przenies z normalnych rejestrow do XMM2
 
 
@@ -53,9 +52,9 @@ poczatekPetli:
 
 nadal24LubWieksze:
 	
-	movups XMM3, [RBX]        ; wez 16 bajtow z src
-	movups XMM4, 7[RBX]       ; wez 16 bajtow z src[7]
-	movups XMM5, 15[RBX]      ; wez 16 bajtow z src[15]
+	movups XMM3, [RDX]        ; wez 16 bajtow z src
+	movups XMM4, 7[RDX]       ; wez 16 bajtow z src[7]
+	movups XMM5, 15[RDX]      ; wez 16 bajtow z src[15]
 
 	pshufb XMM3, XMM0         ; rozmiesc bajty w XMM3 wedlug maski w XMM0
 	movups [RCX], XMM3        ; zapisz dane w dest
@@ -68,43 +67,42 @@ nadal24LubWieksze:
 	movups 16[RCX+R15], XMM4  ; zapisz dane w dest+2*width (width jest z src)
 	movups 32[RCX+R15], XMM5  ; zapisz dane w dest+2*width (width jest z src)
 
-	add RBX, 24 ; zwieksz src o pixele wlasnie przetworzone
-	add RCX, 48 ; zwieksz dest o pixele wlasnie przetworzone
+	add RDX, 24       ; zwieksz src o pixele wlasnie przetworzone
+	add RCX, 48       ; zwieksz dest o pixele wlasnie przetworzone
 
-	add R11, 48 ; dodaj 24 i drugi raz do porównania czy wykonac jeszcze raz
-	cmp R8, R11 ; porownaj zwiekszony o 24 licznik
-	sub R11, 24 ; liczznik w prawidlowym stanie do dalszych obliczen
+	add R11, 48       ; dodaj 24 i drugi raz do porównania czy wykonac jeszcze raz
+	cmp R8, R11       ; porownaj zwiekszony o 24 licznik
+	sub R11, 24       ; liczznik w prawidlowym stanie do dalszych obliczen
 	jbe nadal24LubWieksze
 
-	cmp R8, R11 ; jesli rowne skoncz ten wiersz
+	cmp R8, R11       ; jesli rowne skoncz ten wiersz
 	je nastepnyWiersz
 
 mniejszeNiz24:
 
-	mov R10D, [RBX]            ; get 4 bytes from source
-	movzx EDX, byte ptr 2[RBX] ; get one byte from source
-	mov [RCX], R10D            ; write 4 bytes to destination
-	mov 3[RCX], R10W           ; write two bytes to destination
-	mov 5[RCX], DL             ; write one byte to destination
-	mov [RCX+R15], R10D       ; write 4 bytes to destination
-	mov 3[RCX+R15], R10W      ; write two bytes to destination
-	mov 5[RCX+R15], DL        ; write one byte to destination
+	mov R10D, [RDX]            ; get 4 bytes from source
+	movzx EBX, byte ptr 2[RDX] ; get one byte from source
+	mov [RCX], R10D            ; write 4 bytes to dest
+	mov 3[RCX], R10W           ; write two bytes to dest
+	mov 5[RCX], BL             ; write one byte to dest
+	mov [RCX+R15], R10D        ; write 4 bytes to dest
+	mov 3[RCX+R15], R10W       ; write two bytes to dest
+	mov 5[RCX+R15], BL         ; write one byte to dest
 
-	add RBX, 3  ; kolejny pixel w src
-	add RCX, 6  ; kolejny pixel w src
+	add RDX, 3  ; kolejny pixel w src
+	add RCX, 6  ; kolejny pixel w dest
 	add R11, 3  ; kolejna iteracja
 	cmp R11, R8 ; porownaj czy juz nie sa rowne
 	jb mniejszeNiz24
 
 	
 nastepnyWiersz:
-	add RCX, R15  ; pomin wiersz w dest
-	add RCX, R12
-	add RBX, R9
+	add RCX, R15 ; pomin wiersz w dest
+	add RCX, R12 ; razem z paddingiem
+	add RDX, R9
 
-	dec RAX           ; kolejne przejscie petli do 0
-	test RAX, RAX     ; jesli jest 0 ustawia flage ZR na 1
-	jne poczatekPetli ; ZR=0 wykonuje ponownie
+	cmp RDX, RAX ; czy obecny wskaznik na src jest mniejszy od zaostatniego elementu tablicy
+	jne poczatekPetli
 
 
 koniec:
