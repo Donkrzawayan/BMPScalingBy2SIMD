@@ -1,5 +1,6 @@
-﻿//
-//#include <iostream>
+﻿//Skalowanie obrazu BMP przez 2
+//5 sem. 2020/2021
+#include <iostream>
 #include <Windows.h>
 #include <cstring> //strcmp
 #include <sstream>
@@ -96,8 +97,25 @@ int main(const int argc, char *argv[])
 
 
 	//for (int i = 0; i < 20; ++i)
-	multithreating(scalerASM, thread, dest.data, source.data,
+	multithreating(scalerC, thread, dest.data, source.data,
 		source.width, source.height, source.rowPadded, dest.rowPadded);
+	
+	/*std::cout << "Program do skalowania BPM przez 2\n";
+	std::cout << "SSE4.1 " << (sse4_1Supportted ? "" : "nie ") << "jest wspierany.\n";
+	int x = 0;
+	while (x != 3) {
+		std::cout << "1. C\n";
+		std::cout << (sse4_1Supportted ? "2" : " ") << ". ASM\n";
+		std::cout << "3. Zakoncz.\n";
+		std::cout << "Wybierz: ";
+		std::cin >> x;
+		if (x == 1)
+			multithreating(scalerC, thread, dest.data, source.data,
+				source.width, source.height, source.rowPadded, dest.rowPadded);
+		else if (x == 2 && sse4_1Supportted)
+			multithreating(scalerASM, thread, dest.data, source.data,
+				source.width, source.height, source.rowPadded, dest.rowPadded);
+	}*/
 
 
 	dest.write(destName);

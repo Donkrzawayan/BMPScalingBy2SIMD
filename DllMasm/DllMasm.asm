@@ -1,4 +1,5 @@
-
+; Skalowanie obrazu BMP przez 2
+; 5 sem. 2020/2021
 .code
 
 MyProc1 proc

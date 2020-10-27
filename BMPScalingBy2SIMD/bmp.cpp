@@ -1,3 +1,5 @@
+//Skalowanie obrazu BMP przez 2
+//5 sem. 2020/2021
 #include "bmp.hpp"
 #include <fstream>
 #include <iostream>

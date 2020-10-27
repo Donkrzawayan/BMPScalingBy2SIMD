@@ -1,3 +1,5 @@
+//Skalowanie obrazu BMP przez 2
+//5 sem. 2020/2021
 #ifndef BMP_HPP
 #define BMP_HPP
 
