@@ -38,6 +38,8 @@ MyProc1 proc
 	movq XMM2, RBX
 	pinsrq XMM2, R10, 1        ; przenies z normalnych rejestrow do XMM2
 
+	vinserti128 YMM0, YMM0, XMM1, 1 ; przenies z XMM1 do gory YMM0
+
 
 poczatekPetli:
 	lea R11, [RDX+R8] ; miejsce konca wiersza (do tego pixela przetwarzaj)
@@ -46,18 +48,26 @@ poczatekPetli:
 
 nadal24LubWieksze:
 	movups XMM3, [RDX]        ; wez 16 bajtow z src
-	movups XMM4, 7[RDX]       ; wez 16 bajtow z src[7]
+	vinsertf128 YMM3, YMM3, 7[RDX], 1
+
+	;movups XMM4, 7[RDX]       ; wez 16 bajtow z src[7]
 	movups XMM5, 15[RDX]      ; wez 16 bajtow z src[15]
 
-	pshufb XMM3, XMM0         ; rozmiesc bajty w XMM3 wedlug maski w XMM0
-	movups [RCX], XMM3        ; zapisz dane w dest
-	pshufb XMM4, XMM1         ; rozmiesc bajty w XMM4 wedlug maski w XMM1
-	movups 16[RCX], XMM4      ; zapisz dane w dest
+
+	vpshufb YMM3, YMM3, YMM0
+	vmovups [RCX], YMM3
+
+	;pshufb XMM3, XMM0         ; rozmiesc bajty w XMM3 wedlug maski w XMM0
+	;movups [RCX], XMM3        ; zapisz dane w dest
+	;pshufb XMM4, XMM1         ; rozmiesc bajty w XMM4 wedlug maski w XMM1
+	;movups 16[RCX], XMM4      ; zapisz dane w dest
 	pshufb XMM5, XMM2         ; rozmiesc bajty w XMM5 wedlug maski w XMM2
 	movups 32[RCX], XMM5      ; zapisz dane w dest
 
-	movups [RCX+R15], XMM3    ; zapisz dane w dest+2*width (width jest z src)
-	movups 16[RCX+R15], XMM4  ; zapisz dane w dest+2*width (width jest z src)
+	vmovups [RCX+R15], YMM3
+
+	;movups [RCX+R15], XMM3    ; zapisz dane w dest+2*width (width jest z src)
+	;movups 16[RCX+R15], XMM4  ; zapisz dane w dest+2*width (width jest z src)
 	movups 32[RCX+R15], XMM5  ; zapisz dane w dest+2*width (width jest z src)
 
 	add RCX, 48  ; zwieksz dest o pixele wlasnie przetworzone

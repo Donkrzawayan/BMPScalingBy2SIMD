@@ -67,7 +67,6 @@ void initializeArray(uint8_t *data, int32_t size) {
 		data[i] = static_cast<uint8_t>(2);
 }
 
-//TODO: choosing DDL from user
 int main(const int argc, char *argv[])
 {
 	const char *sourceName = "";
@@ -88,8 +87,12 @@ int main(const int argc, char *argv[])
 	int cpuinfo[4];
 	__cpuid(cpuinfo, 1);
 	bool sse4_1Supportted = false;
+	bool avx2Supportted = false;
 	sse4_1Supportted = cpuinfo[2] & (1 << 19) || false;
+	__cpuid(cpuinfo, 7);
+	avx2Supportted = cpuinfo[1] & (1 << 5) || false;
 	//std::cout << "SSE4.1:" << (sse4_1Supportted ? 1 : 0) << std::endl;
+	//std::cout << "AVX2:" << (avx2Supportted ? 1 : 0) << std::endl;
 
 	BMP source(sourceName);
 	BMP dest(source, 2 * source.width, 2 * source.height);
@@ -97,7 +100,7 @@ int main(const int argc, char *argv[])
 
 
 	//for (int i = 0; i < 20; ++i)
-	multithreating(scalerC, thread, dest.data, source.data,
+	multithreating(scalerASM, thread, dest.data, source.data,
 		source.width, source.height, source.rowPadded, dest.rowPadded);
 	
 	/*std::cout << "Program do skalowania BPM przez 2\n";
