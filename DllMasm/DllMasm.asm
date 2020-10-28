@@ -10,9 +10,7 @@ MyProc1 proc
 
 	test R9, R9  ; jesli size rowne 0 to skoncz program
 	je koniec
-	mov RAX, RDX ; kopiuj do src+size
-	add RAX, R9  ; na tym skoncz kopiowanie
-
+	lea RAX, [RDX+R9] ; kopiuj az do src+size
 
 		; padding
 	mov R9, R8                 ; srcPadding bedzie w R9
@@ -24,10 +22,7 @@ MyProc1 proc
 	and R12, 1                 ; moze byc tylko 2 albo 0
 	shl R12, 1                 ; jak jest 1 to zrob 2
 
-	mov R15, R8  ; o tyle przeskakuj w dest po kazdym wiwrszu src
-	shl R15, 1   ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width+padding)
-	add R15, R12 ; tu jest ten +padding
-
+	lea R15, [2*R8+R12] ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width+padding)
 
 		; ustawienie maski (wykorzystam XMM0-XMM2)
 	mov R10, 0608070605040305h
@@ -45,13 +40,11 @@ MyProc1 proc
 
 
 poczatekPetli:
-
-	xor R11, R11 ; licznik w wierszu
+	lea R11, [RDX+R8] ; miejsce konca wiersza (do tego pixela przetwarzaj)
 	cmp R8, 24   ; jeli rowne lub wieksze od 8 pizeli/24subpixei
 	jb mniejszeNiz24
 
 nadal24LubWieksze:
-	
 	movups XMM3, [RDX]        ; wez 16 bajtow z src
 	movups XMM4, 7[RDX]       ; wez 16 bajtow z src[7]
 	movups XMM5, 15[RDX]      ; wez 16 bajtow z src[15]
@@ -67,15 +60,13 @@ nadal24LubWieksze:
 	movups 16[RCX+R15], XMM4  ; zapisz dane w dest+2*width (width jest z src)
 	movups 32[RCX+R15], XMM5  ; zapisz dane w dest+2*width (width jest z src)
 
-	add RDX, 24       ; zwieksz src o pixele wlasnie przetworzone
-	add RCX, 48       ; zwieksz dest o pixele wlasnie przetworzone
-
-	add R11, 48       ; dodaj 24 i drugi raz do porównania czy wykonac jeszcze raz
-	cmp R8, R11       ; porownaj zwiekszony o 24 licznik
-	sub R11, 24       ; liczznik w prawidlowym stanie do dalszych obliczen
+	add RCX, 48  ; zwieksz dest o pixele wlasnie przetworzone
+	add RDX, 48  ; dodaj 24 i drugi raz do porównania czy wykonac jeszcze raz
+	cmp R11, RDX ; porownaj zwiekszony o 24 src
+	sub RDX, 24  ; src w prawidlowym stanie do dalszych obliczen
 	jbe nadal24LubWieksze
 
-	cmp R8, R11       ; jesli rowne skoncz ten wiersz
+	cmp R11, RDX ; jesli rowne skoncz ten wiersz
 	je nastepnyWiersz
 
 mniejszeNiz24:
@@ -89,10 +80,9 @@ mniejszeNiz24:
 	mov 3[RCX+R15], R10W       ; write two bytes to dest
 	mov 5[RCX+R15], BL         ; write one byte to dest
 
-	add RDX, 3  ; kolejny pixel w src
-	add RCX, 6  ; kolejny pixel w dest
-	add R11, 3  ; kolejna iteracja
-	cmp R11, R8 ; porownaj czy juz nie sa rowne
+	add RDX, 3   ; kolejny pixel w src
+	add RCX, 6   ; kolejny pixel w dest
+	cmp RDX, R11 ; porownaj czy juz nie sa rowne
 	jb mniejszeNiz24
 
 	
