@@ -17,6 +17,7 @@ void scalerASM(uint8_t *destination, uint8_t *source, int32_t width, unsigned si
 	dllHandle = LoadLibrary(L"DllMasm.dll");
 	MyProc1 procedura = (MyProc1)GetProcAddress(dllHandle, "MyProc1");
 	procedura(destination, source, width, size);
+	//FreeLibrary(dllHandle);
 }
 
 void scalerC(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
@@ -24,6 +25,7 @@ void scalerC(uint8_t *destination, uint8_t *source, int32_t width, unsigned size
 	dllHandle = LoadLibrary(L"DllC.dll");
 	MyProc1 fun = (MyProc1)GetProcAddress(dllHandle, "fun");
 	fun(destination, source, width, size);
+	//FreeLibrary(dllHandle);
 }
 
 void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
@@ -34,7 +36,7 @@ void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
 	const int32_t rowsPerThread = height / N;
 	const int32_t firstLoop = height % N;
 
-	//auto start = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::high_resolution_clock::now();
 
 	std::queue<std::thread> threads;
 
@@ -56,9 +58,9 @@ void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
 		threads.pop();
 	}
 
-	//auto stop = std::chrono::high_resolution_clock::now();
-	//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-	//std::cout << duration.count() << "\n";
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+	std::cout << "Czas: " << duration.count() << "\n";
 }
 
 //TODO: delete later
@@ -85,41 +87,68 @@ int main(const int argc, char *argv[])
 	}
 
 	int cpuinfo[4];
-	__cpuid(cpuinfo, 1);
-	bool sse4_1Supportted = false;
 	bool avx2Supportted = false;
-	sse4_1Supportted = cpuinfo[2] & (1 << 19) || false;
 	__cpuid(cpuinfo, 7);
 	avx2Supportted = cpuinfo[1] & (1 << 5) || false;
-	//std::cout << "SSE4.1:" << (sse4_1Supportted ? 1 : 0) << std::endl;
 	//std::cout << "AVX2:" << (avx2Supportted ? 1 : 0) << std::endl;
 
-	BMP source(sourceName);
-	BMP dest(source, 2 * source.width, 2 * source.height);
-	initializeArray(dest.data, dest.size);
+	//BMP source(sourceName);
+	//BMP dest(source, 2 * source.width, 2 * source.height);
+	//initializeArray(dest.data, dest.size);
 
 
-	//for (int i = 0; i < 20; ++i)
+	/*for (int i = 0; i < 20; ++i)
 	multithreating(scalerASM, thread, dest.data, source.data,
-		source.width, source.height, source.rowPadded, dest.rowPadded);
-	
-	/*std::cout << "Program do skalowania BPM przez 2\n";
-	std::cout << "SSE4.1 " << (sse4_1Supportted ? "" : "nie ") << "jest wspierany.\n";
+		source.width, source.height, source.rowPadded, dest.rowPadded);*/
+	std::string temp;
+	std::cout << "Program do skalowania BPM przez 2\n";
+	std::cout << "AVX2 " << (avx2Supportted ? "" : "nie ") << "jest wspierany.\n";
 	int x = 0;
-	while (x != 3) {
-		std::cout << "1. C\n";
-		std::cout << (sse4_1Supportted ? "2" : " ") << ". ASM\n";
-		std::cout << "3. Zakoncz.\n";
-		std::cout << "Wybierz: ";
+	while (x != 5) {
+		
+		std::cout << "1. Zmien plik zrodlowy.\n"
+			<< "2. Zmien plik docelowy.\n"
+			<< "3. C\n"
+			<< (avx2Supportted ? "4" : " ") << ". ASM\n"
+			<< "5. Zakoncz.\n"
+			<< "Wybierz: ";
 		std::cin >> x;
-		if (x == 1)
+		switch (x) {
+		case 1: {
+			std::cout << "Nowy plik: ";
+			std::cin >> temp;
+			sourceName = temp.c_str();
+		}
+		case 2: {
+			std::cout << "Nowy plik: ";
+			std::cin >> temp;
+			destName = temp.c_str();
+		}
+		case 3: {
+			BMP source(sourceName);
+			BMP dest(source, 2 * source.width, 2 * source.height);
 			multithreating(scalerC, thread, dest.data, source.data,
 				source.width, source.height, source.rowPadded, dest.rowPadded);
-		else if (x == 2 && sse4_1Supportted)
-			multithreating(scalerASM, thread, dest.data, source.data,
-				source.width, source.height, source.rowPadded, dest.rowPadded);
-	}*/
+
+			dest.write(destName);
+			break;
+		}
+		case 4: {
+			if (avx2Supportted) {
+				BMP source(sourceName);
+				BMP dest(source, 2 * source.width, 2 * source.height);
+				multithreating(scalerASM, thread, dest.data, source.data,
+					source.width, source.height, source.rowPadded, dest.rowPadded);
+
+				dest.write(destName);
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
 
 
-	dest.write(destName);
+	
 }

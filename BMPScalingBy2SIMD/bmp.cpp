@@ -3,6 +3,7 @@
 #include "bmp.hpp"
 #include <fstream>
 #include <iostream>
+#include <string>
 
 BMP::BMP(const BMP & source, const int32_t width, const int32_t height)
 	: header(source.header),
@@ -20,9 +21,12 @@ BMP::BMP(const BMP & source, const int32_t width, const int32_t height)
 void BMP::read(const char * filename)
 {
 	std::ifstream input(filename, std::ios::binary | std::ios::in);
-	if (!input) {
+	while (!input) {
 		std::cerr << "Cant read file.\n";
-		return;
+		std::cout << "Wprowadz poprawna nazwe pliku: ";
+		std::string temp;
+		std::cin >> temp;
+		input.open(temp.c_str(), std::ios::binary | std::ios::in);
 	}
 
 	//clear old data
@@ -43,7 +47,10 @@ void BMP::read(const char * filename)
 
 	if (size >= INT32_MAX / 4) {
 		std::cerr << "Too big file.\n";
-		return;
+		std::cout << "Wprowadz inna nazwe pliku: ";
+		std::string temp;
+		std::cin >> temp;
+		return read(temp.c_str());
 	}
 	
 	data = new uint8_t[size];
@@ -56,9 +63,12 @@ void BMP::read(const char * filename)
 void BMP::write(const char * filename)const
 {
 	std::ofstream output(filename, std::ios::binary | std::ios::out);
-	if (!output) {
+	while (!output) {
 		std::cerr << "Cant write file.\n";
-		return;
+		std::cout << "Wprowadz poprawna nazwe pliku: ";
+		std::string temp;
+		std::cin >> temp;
+		output.open(temp.c_str(), std::ios::binary | std::ios::in);
 	}
 
 	output.write(header.data(), header.size());
