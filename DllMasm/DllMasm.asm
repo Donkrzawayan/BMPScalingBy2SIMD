@@ -99,7 +99,6 @@ koniec:
 
 	pop R15
 	pop R12
-	;xor RAX, RAX
 
 ret ; zwraca zawartosc RAX
 MyProc1 endp

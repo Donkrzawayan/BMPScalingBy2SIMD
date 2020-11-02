@@ -12,29 +12,19 @@
 
 typedef uint8_t *(_fastcall *MyProc1)(uint8_t *, uint8_t *, int32_t, unsigned);
 
-void scalerASM(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
-	HINSTANCE dllHandle = NULL;
-	dllHandle = LoadLibrary(L"DllMasm.dll");
-	MyProc1 procedura = (MyProc1)GetProcAddress(dllHandle, "MyProc1");
-	procedura(destination, source, width, size);
-	//FreeLibrary(dllHandle);
-}
-
-void scalerC(uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
-	HINSTANCE dllHandle = NULL;
-	dllHandle = LoadLibrary(L"DllC.dll");
-	MyProc1 fun = (MyProc1)GetProcAddress(dllHandle, "fun");
-	fun(destination, source, width, size);
-	//FreeLibrary(dllHandle);
-}
-
-void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
-	const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height,
+void multithreatingASM(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height,
 	const int32_t srcRowPadding, const int32_t destRowPadding)
 {
 	const int32_t subpxWidth = 3 * width;
 	const int32_t rowsPerThread = height / N;
 	const int32_t firstLoop = height % N;
+
+	HINSTANCE dllHandle = NULL;
+	dllHandle = LoadLibrary(L"DllMasm.dll");
+	MyProc1 procedura = (MyProc1)GetProcAddress(dllHandle, "MyProc1");
+	auto scaler = [&](uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
+		procedura(destination, source, width, size);
+	};
 
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -51,7 +41,6 @@ void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
 	destSize = 2 * destRowPadding * rowsPerThread;
 	for (unsigned i = 0; i < N - firstLoop; ++i, dest += destSize, src += srcSize)
 		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, srcSize)));
-	//scaler(dest, src, subpxWidth, size);
 
 	while (!threads.empty()) {
 		threads.front().join();
@@ -61,6 +50,50 @@ void multithreating(void(*scaler)(uint8_t *, uint8_t *, int32_t, unsigned),
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 	std::cout << "Czas: " << duration.count() << "\n";
+
+	FreeLibrary(dllHandle);
+}
+
+void multithreatingC(const unsigned N, uint8_t *dest, uint8_t *src, const int32_t width, const int32_t height,
+	const int32_t srcRowPadding, const int32_t destRowPadding)
+{
+	const int32_t subpxWidth = 3 * width;
+	const int32_t rowsPerThread = height / N;
+	const int32_t firstLoop = height % N;
+
+	HINSTANCE dllHandle = NULL;
+	dllHandle = LoadLibrary(L"DllC.dll");
+	MyProc1 fun = (MyProc1)GetProcAddress(dllHandle, "fun");
+	auto scaler = [&](uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
+		fun(destination, source, width, size);
+	};
+
+	auto start = std::chrono::high_resolution_clock::now();
+
+	std::queue<std::thread> threads;
+
+	//rowsPerThread+1
+	int32_t srcSize = srcRowPadding * rowsPerThread + srcRowPadding;
+	int32_t destSize = 2 * (destRowPadding * rowsPerThread + destRowPadding);
+	for (int i = 0; i < firstLoop; ++i, dest += destSize, src += srcSize)
+		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, srcSize)));
+
+	//rowsPerThread
+	srcSize = srcRowPadding * rowsPerThread;
+	destSize = 2 * destRowPadding * rowsPerThread;
+	for (unsigned i = 0; i < N - firstLoop; ++i, dest += destSize, src += srcSize)
+		threads.push(std::move(std::thread(scaler, dest, src, subpxWidth, srcSize)));
+
+	while (!threads.empty()) {
+		threads.front().join();
+		threads.pop();
+	}
+
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+	std::cout << "Czas: " << duration.count() << "\n";
+
+	FreeLibrary(dllHandle);
 }
 
 //TODO: delete later
@@ -92,14 +125,6 @@ int main(const int argc, char *argv[])
 	avx2Supportted = cpuinfo[1] & (1 << 5) || false;
 	//std::cout << "AVX2:" << (avx2Supportted ? 1 : 0) << std::endl;
 
-	//BMP source(sourceName);
-	//BMP dest(source, 2 * source.width, 2 * source.height);
-	//initializeArray(dest.data, dest.size);
-
-
-	/*for (int i = 0; i < 20; ++i)
-	multithreating(scalerASM, thread, dest.data, source.data,
-		source.width, source.height, source.rowPadded, dest.rowPadded);*/
 	std::string temp;
 	std::cout << "Program do skalowania BPM przez 2\n";
 	std::cout << "AVX2 " << (avx2Supportted ? "" : "nie ") << "jest wspierany.\n";
@@ -127,7 +152,7 @@ int main(const int argc, char *argv[])
 		case 3: {
 			BMP source(sourceName);
 			BMP dest(source, 2 * source.width, 2 * source.height);
-			multithreating(scalerC, thread, dest.data, source.data,
+			multithreatingC(thread, dest.data, source.data,
 				source.width, source.height, source.rowPadded, dest.rowPadded);
 
 			dest.write(destName);
@@ -137,7 +162,7 @@ int main(const int argc, char *argv[])
 			if (avx2Supportted) {
 				BMP source(sourceName);
 				BMP dest(source, 2 * source.width, 2 * source.height);
-				multithreating(scalerASM, thread, dest.data, source.data,
+				multithreatingASM(thread, dest.data, source.data,
 					source.width, source.height, source.rowPadded, dest.rowPadded);
 
 				dest.write(destName);
