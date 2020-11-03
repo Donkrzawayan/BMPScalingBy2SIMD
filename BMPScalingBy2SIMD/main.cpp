@@ -49,7 +49,7 @@ void multithreatingASM(const unsigned N, uint8_t *dest, uint8_t *src, const int3
 
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-	std::cout << "Czas: " << duration.count() << "\n";
+	std::cout << "Czas: " << duration.count() << " ms \n";
 
 	FreeLibrary(dllHandle);
 }
@@ -91,7 +91,7 @@ void multithreatingC(const unsigned N, uint8_t *dest, uint8_t *src, const int32_
 
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-	std::cout << "Czas: " << duration.count() << "\n";
+	std::cout << "Czas: " << duration.count() << " ms \n";
 
 	FreeLibrary(dllHandle);
 }
@@ -104,15 +104,16 @@ void initializeArray(uint8_t *data, int32_t size) {
 
 int main(const int argc, char *argv[])
 {
-	const char *sourceName = "";
-	const char *destName = "";
+	std::string sourceName = "i.bmp";
+	std::string destName = "o.bmp";
 	unsigned thread = std::thread::hardware_concurrency() ? std::thread::hardware_concurrency() : 1U;
 	for (int i = 1; i < argc; ++i) {
 		if (!strcmp("-s", argv[i]))
 			sourceName = argv[++i];
 		else if (!strcmp("-d", argv[i]))
 			destName = argv[++i];
-		else if (!strcmp("-t", argv[i]) && strcmp("0", argv[++i])) {//if user choose 0 (default) set yourself
+		else if (!strcmp("-t", argv[i++]) && argv[i][0] != '0' && argv[i][0] != '-') {
+			//if user choose <1 set yourself
 			std::stringstream number;
 			number << argv[i];
 			number >> thread;
@@ -123,14 +124,11 @@ int main(const int argc, char *argv[])
 	bool avx2Supportted = false;
 	__cpuid(cpuinfo, 7);
 	avx2Supportted = cpuinfo[1] & (1 << 5) || false;
-	//std::cout << "AVX2:" << (avx2Supportted ? 1 : 0) << std::endl;
 
-	std::string temp;
 	std::cout << "Program do skalowania BPM przez 2\n";
 	std::cout << "AVX2 " << (avx2Supportted ? "" : "nie ") << "jest wspierany.\n";
 	int x = 0;
 	while (x != 5) {
-		
 		std::cout << "1. Zmien plik zrodlowy.\n"
 			<< "2. Zmien plik docelowy.\n"
 			<< "3. C\n"
@@ -138,34 +136,35 @@ int main(const int argc, char *argv[])
 			<< "5. Zakoncz.\n"
 			<< "Wybierz: ";
 		std::cin >> x;
+		std::cin.get();
 		switch (x) {
 		case 1: {
 			std::cout << "Nowy plik: ";
-			std::cin >> temp;
-			sourceName = temp.c_str();
+			std::cin >> sourceName;
+			break;
 		}
 		case 2: {
 			std::cout << "Nowy plik: ";
-			std::cin >> temp;
-			destName = temp.c_str();
+			std::cin >> destName;
+			break;
 		}
 		case 3: {
-			BMP source(sourceName);
+			BMP source(sourceName.c_str());
 			BMP dest(source, 2 * source.width, 2 * source.height);
 			multithreatingC(thread, dest.data, source.data,
 				source.width, source.height, source.rowPadded, dest.rowPadded);
 
-			dest.write(destName);
+			dest.write(destName.c_str());
 			break;
 		}
 		case 4: {
 			if (avx2Supportted) {
-				BMP source(sourceName);
+				BMP source(sourceName.c_str());
 				BMP dest(source, 2 * source.width, 2 * source.height);
 				multithreatingASM(thread, dest.data, source.data,
 					source.width, source.height, source.rowPadded, dest.rowPadded);
 
-				dest.write(destName);
+				dest.write(destName.c_str());
 			}
 			break;
 		}

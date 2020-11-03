@@ -7,7 +7,6 @@ MyProc1 proc
 	push R15
 
 		; RCX - dest, RDX - src, R8 - width, R9 - size
-
 	test R9, R9  ; jesli size rowne 0 to skoncz program
 	je koniec
 	lea RAX, [RDX+R9] ; kopiuj az do src+size
@@ -23,6 +22,7 @@ MyProc1 proc
 	shl R12, 1                 ; jak jest 1 to zrob 2
 
 	lea R15, [2*R8+R12] ; po kazdym przejsciu wiersza przeskocz jeden dalej (dest+=2*width+padding)
+	add R12, R15        ; pomin wiersz w dest razem z paddingiem
 
 		; ustawienie maski (wykorzystam XMM0-XMM2)
 	mov R10, 0608070605040305h
@@ -43,14 +43,13 @@ MyProc1 proc
 
 poczatekPetli:
 	lea R11, [RDX+R8] ; miejsce konca wiersza (do tego pixela przetwarzaj)
-	cmp R8, 24        ; jeli rowne lub wieksze od 8 pizeli/24subpixei
+	cmp R8, 24        ; jesli rowne lub wieksze od 8 pizeli/24subpixei
 	jb mniejszeNiz24
 
 nadal24LubWieksze:
 	movups XMM3, [RDX]                ; wez 16 bajtow z src
 	vinsertf128 YMM3, YMM3, 7[RDX], 1 ; wez 16 bajtow z src[7] do gory YMM3
 	movups XMM5, 15[RDX]              ; wez 16 bajtow z src[15]
-
 
 	vpshufb YMM3, YMM3, YMM0 ; rozmiesc bajty w YMM3 wedlug maski w YMM0
 	vmovups [RCX], YMM3      ; zapisz dane w dest
@@ -87,8 +86,7 @@ mniejszeNiz24:
 
 	
 nastepnyWiersz:
-	add RCX, R15 ; pomin wiersz w dest
-	add RCX, R12 ; razem z paddingiem
+	add RCX, R12 ; pomin wiersz w dest razem z paddingiem
 	add RDX, R9
 
 	cmp RDX, RAX ; czy obecny wskaznik na src jest mniejszy od zaostatniego elementu tablicy
