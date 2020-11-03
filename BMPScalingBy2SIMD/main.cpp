@@ -1,5 +1,8 @@
-﻿//Skalowanie obrazu BMP przez 2
-//5 sem. 2020/2021
+﻿/**
+ * @short Skalowanie obrazu BMP przez 2
+ * @date 3.11.20 5 sem. 2020/2021
+ * @author Krzysztof Doniec
+*/
 #include <iostream>
 #include <Windows.h>
 #include <cstring> //strcmp
@@ -22,7 +25,7 @@ void multithreatingASM(const unsigned N, uint8_t *dest, uint8_t *src, const int3
 	HINSTANCE dllHandle = NULL;
 	dllHandle = LoadLibrary(L"DllMasm.dll");
 	MyProc1 procedura = (MyProc1)GetProcAddress(dllHandle, "MyProc1");
-	auto scaler = [&](uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
+	auto scaler = [&procedura](uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
 		procedura(destination, source, width, size);
 	};
 
@@ -64,7 +67,7 @@ void multithreatingC(const unsigned N, uint8_t *dest, uint8_t *src, const int32_
 	HINSTANCE dllHandle = NULL;
 	dllHandle = LoadLibrary(L"DllC.dll");
 	MyProc1 fun = (MyProc1)GetProcAddress(dllHandle, "fun");
-	auto scaler = [&](uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
+	auto scaler = [&fun](uint8_t *destination, uint8_t *source, int32_t width, unsigned size) {
 		fun(destination, source, width, size);
 	};
 
@@ -91,7 +94,7 @@ void multithreatingC(const unsigned N, uint8_t *dest, uint8_t *src, const int32_
 
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-	std::cout << "Czas: " << duration.count() << " ms \n";
+	std::cout << "Czas: " << duration.count() << " ms\n";
 
 	FreeLibrary(dllHandle);
 }
@@ -102,33 +105,21 @@ void initializeArray(uint8_t *data, int32_t size) {
 		data[i] = static_cast<uint8_t>(2);
 }
 
-int main(const int argc, char *argv[])
-{
-	std::string sourceName = "i.bmp";
-	std::string destName = "o.bmp";
-	unsigned thread = std::thread::hardware_concurrency() ? std::thread::hardware_concurrency() : 1U;
-	for (int i = 1; i < argc; ++i) {
-		if (!strcmp("-s", argv[i]))
-			sourceName = argv[++i];
-		else if (!strcmp("-d", argv[i]))
-			destName = argv[++i];
-		else if (!strcmp("-t", argv[i++]) && argv[i][0] != '0' && argv[i][0] != '-') {
-			//if user choose <1 set yourself
-			std::stringstream number;
-			number << argv[i];
-			number >> thread;
-		}
-	}
-
+bool avx2Checker() {
 	int cpuinfo[4];
 	bool avx2Supportted = false;
 	__cpuid(cpuinfo, 7);
 	avx2Supportted = cpuinfo[1] & (1 << 5) || false;
+	return avx2Supportted;
+}
+
+void program(std::string &sourceName, std::string &destName, unsigned thread) {
+	bool avx2Supportted = avx2Checker();
 
 	std::cout << "Program do skalowania BPM przez 2\n";
 	std::cout << "AVX2 " << (avx2Supportted ? "" : "nie ") << "jest wspierany.\n";
-	int x = 0;
-	while (x != 5) {
+	char x = '0';
+	while (x != '5') {
 		std::cout << "1. Zmien plik zrodlowy.\n"
 			<< "2. Zmien plik docelowy.\n"
 			<< "3. C\n"
@@ -138,17 +129,17 @@ int main(const int argc, char *argv[])
 		std::cin >> x;
 		std::cin.get();
 		switch (x) {
-		case 1: {
+		case '1': {
 			std::cout << "Nowy plik: ";
 			std::cin >> sourceName;
 			break;
 		}
-		case 2: {
+		case '2': {
 			std::cout << "Nowy plik: ";
 			std::cin >> destName;
 			break;
 		}
-		case 3: {
+		case '3': {
 			BMP source(sourceName.c_str());
 			BMP dest(source, 2 * source.width, 2 * source.height);
 			multithreatingC(thread, dest.data, source.data,
@@ -157,7 +148,7 @@ int main(const int argc, char *argv[])
 			dest.write(destName.c_str());
 			break;
 		}
-		case 4: {
+		case '4': {
 			if (avx2Supportted) {
 				BMP source(sourceName.c_str());
 				BMP dest(source, 2 * source.width, 2 * source.height);
@@ -172,7 +163,25 @@ int main(const int argc, char *argv[])
 			break;
 		}
 	}
+}
 
+int main(const int argc, char *argv[])
+{
+	std::string sourceName = "i.bmp";
+	std::string destName = "o.bmp";
+	int thread = std::thread::hardware_concurrency() ? std::thread::hardware_concurrency() : 1U;
+	for (int i = 1; i < argc; ++i) {
+		if (!strcmp("-s", argv[i]))
+			sourceName = argv[++i];
+		else if (!strcmp("-d", argv[i]))
+			destName = argv[++i];
+		else if (!strcmp("-t", argv[i++]) && argv[i][0] != '0' && argv[i][0] != '-') {
+			//if user choose <1 set yourself
+			std::stringstream number;
+			number << argv[i];
+			number >> thread;
+		}
+	}
 
-	
+	program(sourceName, destName, thread);
 }

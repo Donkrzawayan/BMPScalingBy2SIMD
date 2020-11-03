@@ -1,5 +1,8 @@
-/* Skalowanie obrazu BMP przez 2 */
-/* 5 sem. 2020/2021 */
+/**
+ * @short Skalowanie obrazu BMP przez 2
+ * @date 3.11.20 5 sem. 2020/2021
+ * @author Krzysztof Doniec
+*/
 #include "pch.h"
 #include <stdint.h> /* int32_t, uint8_t */
 #include <string.h> /* memcpy */
