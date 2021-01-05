@@ -1,8 +1,3 @@
-/**
- * @short Skalowanie obrazu BMP przez 2
- * @date 3.11.20 5 sem. 2020/2021
- * @author Krzysztof Doniec
-*/
 #include "bmp.hpp"
 #include <fstream>
 #include <iostream>
