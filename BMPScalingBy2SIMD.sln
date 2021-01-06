@@ -12,6 +12,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DllMasm", "DllMasm\DllMasm.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DllC", "DllC\DllC.vcxproj", "{5C1A6E86-3AEA-4DF8-8EA5-85B879AB817E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1540079A-71BB-4096-9CB0-C89A18B03F55}"
+	ProjectSection(SolutionItems) = preProject
+		REDME.md = REDME.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
